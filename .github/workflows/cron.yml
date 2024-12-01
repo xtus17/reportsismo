@@ -1,0 +1,12 @@
+name: Ejecutar API cada 5 minutos
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  call-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hacer una petición a la API
+        run: curl -X GET https://report-ashen-three.vercel.app/api/apisismo
