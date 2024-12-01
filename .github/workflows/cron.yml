@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Hacer una petición a la API
-        run: curl -X GET https://report-ashen-three.vercel.app/api/apisismo
+        run: curl -X GET https://reportsismo.vercel.app/api/sismo
