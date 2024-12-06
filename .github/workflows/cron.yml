@@ -5,8 +5,26 @@ on:
     - cron: '*/5 * * * *'
 
 jobs:
-  call-api:
+  call-api-and-send-notifications:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Hacer una petición a la API
-        run: curl -X GET https://reportsismo.vercel.app/api/sismo
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Llamar al endpoint y guardar la respuesta
+        id: fetch-response
+        run: |
+          RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
+          echo "Respuesta de la API: $RESPONSE"
+          echo "custom_body=$RESPONSE" >> $GITHUB_ENV
+
+      - name: Enviar notificaciones
+        env:
+          CUSTOM_BODY: ${{ env.custom_body }}
+        run: node sendNotifications.js
