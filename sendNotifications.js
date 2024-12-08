@@ -2,7 +2,7 @@ import { Expo } from "expo-server-sdk";
 import fetch from "node-fetch";
 
 const expo = new Expo();
-const RTDatabase = "https://ajedrez-a65a1-default-rtdb.firebaseio.com/";
+const RTDatabase = "https://empoderadasapp-default-rtdb.firebaseio.com/";
 
 // Función para enviar notificaciones
 const sendNotifications = async () => {
