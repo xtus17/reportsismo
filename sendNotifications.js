@@ -65,7 +65,7 @@ sendNotifications();
 
 import { Expo } from "expo-server-sdk";
 import admin from "firebase-admin";
-import serviceAccount from "./earthsismo_Clave.json";
+import serviceAccount from "./earthsismo.json" assert { type: "json" };
 
 // Inicializar Firebase Admin SDK
 if (!admin.apps.length) {
