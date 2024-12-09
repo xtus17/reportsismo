@@ -153,6 +153,10 @@ jobs:
           path: .sismo_cache
           key: sismo-data-cache
 
+      - name: Set up Firebase credentials
+        run: |
+          echo "${{ secrets.FIREBASE_CREDENTIALS }}" > ./earthsismo.json
+          
       - name: Fetch Sismo Data
         id: fetch_sismo
         run: |
