@@ -72,6 +72,8 @@ if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
+  console.log("Firebase Admin SDK inicializado:", admin.apps.length > 0);
+
 }
 
 const expo = new Expo();
@@ -79,6 +81,8 @@ const firestore = admin.firestore();
 
 // Función para guardar los datos del sismo en Firestore
 const saveSismoToFirestore = async (sismoResponse) => {
+  console.log("Sismo Response:", sismoResponse);
+
   try {
     const sismoData = JSON.parse(sismoResponse); // Convertir la respuesta en un objeto JSON
 
@@ -108,6 +112,16 @@ const saveSismoToFirestore = async (sismoResponse) => {
       });
 
     console.log(`Sismo guardado en Firestore con ID: ${timestamp}`);
+    console.log("Datos procesados:", {
+      date,
+      time,
+      magnitude,
+      place,
+      latitude,
+      longitude,
+      depth,
+    });
+    
   } catch (error) {
     console.error("Error al guardar el sismo en Firestore:", error.message);
   }
