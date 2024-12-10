@@ -275,3 +275,94 @@ jobs:
         run: node sendNotifications.js
         env:
           SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
+
+
+
+
+
+
+
+
+
+
+
+
+name: Sismo Notification
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # Ejecutar cada 5 minutos
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Restore cache
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: .sismo_cache
+          key: sismo-data-cache
+
+      - name: Set up Firebase credentials from secrets
+        run: |
+          echo "TYPE=${{ secrets.TYPE }}" >> $GITHUB_ENV
+          echo "PROJECT_ID=${{ secrets.PROJECTID }}" >> $GITHUB_ENV
+          echo "PRIVATE_KEY_ID=${{ secrets.PRIVATEKEYID }}" >> $GITHUB_ENV
+          echo "PRIVATE_KEY=${{ secrets.PRIVATEKEY }}" >> $GITHUB_ENV
+          echo "CLIENT_EMAIL=${{ secrets.CLIENTEMAIL }}" >> $GITHUB_ENV
+          echo "CLIENT_ID=${{ secrets.CLIENTID }}" >> $GITHUB_ENV
+          echo "AUTH_URI=${{ secrets.AUTHURI }}" >> $GITHUB_ENV
+          echo "TOKEN_URI=${{ secrets.TOKENURI }}" >> $GITHUB_ENV
+          echo "AUTH_PROVIDER_X509_CERT_URL=${{ secrets.AUTHPROVIDERX509CERTURL }}" >> $GITHUB_ENV
+          echo "CLIENT_X509_CERT_URL=${{ secrets.CLIENTX509CERTURL }}" >> $GITHUB_ENV
+          echo "UNIVERSE_DOMAIN=${{ secrets.UNIVERSEDOMAIN }}" >> $GITHUB_ENV
+
+      - name: Fetch Sismo Data
+        id: fetch_sismo
+        run: |
+          mkdir -p .sismo_cache
+          LAST_SISMO=""
+          if [ -f ".sismo_cache/last_sismo.txt" ]; then
+            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
+          fi
+
+          # Obtener datos del endpoint
+          NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
+          
+          # Verificar si la respuesta está vacía o curl falló
+          if [ -z "$NEW_SISMO" ]; then
+            echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
+            exit 0
+          fi
+
+          # Comparar datos
+          if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
+            echo "No hay cambios en el sismo. Finalizando tarea."
+            exit 0
+          fi
+
+          # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
+          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
+
+      - name: Save cache
+        uses: actions/cache@v3
+        with:
+          path: .sismo_cache
+          key: sismo-data-cache
+
+      - name: Send Notifications
+        if: env.SISMO_RESPONSE != ''
+        run: node sendNotifications.js
+        env:
+          SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}

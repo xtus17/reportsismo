@@ -197,25 +197,32 @@ sendNotifications();
 
 
 
+import dotenv from 'dotenv';
+dotenv.config();
 
+const firebaseCredentials = {
+  TYPE: process.env.TYPE,
+  PROJECT_ID:process.env.PROJECT_ID,
+  PRIVATE_KEY_ID: process.env.PRIVATE_KEY_ID,
+  PRIVATE_KEY: process.env.PRIVATE_KEY, 
+  CLIENT_EMAIL: process.env.CLIENT_EMAIL,
+  CLIENT_ID: process.env.CLIENT_ID,
+  AUTH_URI: process.env.AUTH_URI,
+  TOKEN_URI: process.env.TOKEN_URI,
+  AUTH_PROVIDER_X509_CERT_URL: process.env.AUTH_PROVIDER_X509_CERT_URL,
+  CLIENT_X509_CERT_URL: process.env.CLIENT_X509_CERT_URL,
+  UNIVERSE_DOMAIN: process.env.UNIVERSE_DOMAIN,
+};
 
 import { Expo } from "expo-server-sdk";
 import admin from "firebase-admin";
 
 // Inicializar Firebase Admin SDK
 if (!admin.apps.length) {
-  try {
-    // Leer credenciales desde el entorno
-    const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log("Firebase Admin SDK inicializado.");
-  } catch (error) {
-    console.error("Error al inicializar Firebase Admin SDK:", error.message);
-    process.exit(1); // Termina el proceso si no se pueden cargar las credenciales
-  }
+  admin.initializeApp({
+    credential: admin.credential.cert(firebaseCredentials),
+  });
+  console.log("Firebase Admin SDK inicializado:", admin.apps.length > 0);
 }
 
 const expo = new Expo();
