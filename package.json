@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7",
     "expo-server-sdk": "^3.13.0",
     "firebase-admin": "^13.0.1",
     "node-fetch": "^3.3.2"
