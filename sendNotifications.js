@@ -220,7 +220,8 @@ const firebaseCredentials = {
 
 import { Expo } from "expo-server-sdk";
 import admin from "firebase-admin";
-const serviceAccount = require("./firebase-service-account.json");
+//const serviceAccount = require("./firebase-service-account.json");
+import serviceAccount from "./firebase-service-account.json" assert { type: "json" };
 
 // Inicializar Firebase Admin SDK
 
