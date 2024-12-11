@@ -63,8 +63,6 @@ const sendNotifications = async () => {
 sendNotifications();
 */
 
-
-
 /*
 import { Expo } from "expo-server-sdk";
 import admin from "firebase-admin";
@@ -197,9 +195,12 @@ sendNotifications();
 
 
 
-import dotenv from 'dotenv';
+
+
+import dotenv from "dotenv";
 dotenv.config();
 
+/*
 const firebaseCredentials = {
   "type": "service_account",
   "project_id": "earthsismo",
@@ -212,16 +213,30 @@ const firebaseCredentials = {
   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-h7ttm%40earthsismo.iam.gserviceaccount.com",
   "universe_domain": "googleapis.com"
+};*/
+
+const firebaseCredentials = {
+  apiKey: "AIzaSyA6bSjw1tYjZ99Ol9qZ9_FgAEPK0hUjRRc",
+  authDomain: "earthsismos.firebaseapp.com",
+  projectId: "earthsismos",
+  storageBucket: "earthsismos.firebasestorage.app",
+  messagingSenderId: "147937053167",
+  appId: "1:147937053167:web:c4e7f4f1ddc75b6b1e0e1a",
 };
+
+
 
 import { Expo } from "expo-server-sdk";
 import admin from "firebase-admin";
 
 // Inicializar Firebase Admin SDK
+
 if (!admin.apps.length) {
-  admin.initializeApp({
+  console.log(firebaseCredentials);
+ /* admin.initializeApp({
     credential: admin.credential.cert(firebaseCredentials),
-  });
+  });*/
+  admin.initializeApp(firebaseConfig);
   console.log("Firebase Admin SDK inicializado:", admin.apps.length > 0);
 }
 
