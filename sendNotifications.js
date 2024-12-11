@@ -215,30 +215,31 @@ const firebaseCredentials = {
   "universe_domain": "googleapis.com"
 };*/
 
-const firebaseCredentials = {
-  apiKey: "AIzaSyA6bSjw1tYjZ99Ol9qZ9_FgAEPK0hUjRRc",
-  authDomain: "earthsismos.firebaseapp.com",
-  projectId: "earthsismos",
-  storageBucket: "earthsismos.firebasestorage.app",
-  messagingSenderId: "147937053167",
-  appId: "1:147937053167:web:c4e7f4f1ddc75b6b1e0e1a",
-};
 
 
 
 import { Expo } from "expo-server-sdk";
 import admin from "firebase-admin";
+const serviceAccount = require("./firebase-service-account.json");
 
 // Inicializar Firebase Admin SDK
 
 if (!admin.apps.length) {
-  console.log(firebaseCredentials);
- /* admin.initializeApp({
-    credential: admin.credential.cert(firebaseCredentials),
-  });*/
-  admin.initializeApp(firebaseConfig);
+
+ admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
   console.log("Firebase Admin SDK inicializado:", admin.apps.length > 0);
 }
+
+
+
+/*
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+*/
+
 
 const expo = new Expo();
 const firestore = admin.firestore();

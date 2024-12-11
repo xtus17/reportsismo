@@ -313,6 +313,12 @@ jobs:
           path: .sismo_cache
           key: sismo-data-cache
 
+      - name: Configure Firebase Admin
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+
 #      - name: Set up Firebase credentials from secrets
 #        run: |
 #          echo "TYPE=${{ secrets.TYPE }}" >> $GITHUB_ENV
