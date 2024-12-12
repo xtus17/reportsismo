@@ -287,6 +287,85 @@
 
 
 
+#name: Sismo Notification
+
+#on:
+#  schedule:
+#    - cron: "*/5 * * * *"  # Ejecutar cada 5 minutos
+
+#jobs:
+#  notify:
+#    runs-on: ubuntu-latest
+
+#    steps:
+#      - name: Check out repository
+#        uses: actions/checkout@v3
+
+#      - name: Set up Node.js
+#        uses: actions/setup-node@v3
+#        with:
+#          node-version: "18"
+
+#      - name: Restore cache
+#        id: cache
+#        uses: actions/cache@v3
+#        with:
+#          path: .sismo_cache
+#          key: sismo-data-cache
+
+#      - name: Configure Firebase Admin
+#        env:
+#          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
+#        run: |
+#          echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+
+#      - name: Fetch Sismo Data
+#        id: fetch_sismo
+#        run: |
+#          mkdir -p .sismo_cache
+#          LAST_SISMO=""
+#          if [ -f ".sismo_cache/last_sismo.txt" ]; then
+#            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
+#          fi
+
+          # Obtener datos del endpoint
+#          NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
+          
+          # Verificar si la respuesta está vacía o curl falló
+#          if [ -z "$NEW_SISMO" ]; then
+#            echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
+#            exit 0
+#          fi
+
+          # Comparar datos
+#          if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
+#            echo "No hay cambios en el sismo. Finalizando tarea."
+#            exit 0
+#          fi
+
+          # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
+#          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+#          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
+
+#      - name: Save cache
+#        uses: actions/cache@v3
+#        with:
+#          path: .sismo_cache
+#          key: sismo-data-cache
+
+#      - name: Send Notifications
+#        if: env.SISMO_RESPONSE != ''
+#        run: node sendNotifications.js
+#        env:
+#          SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
+
+
+
+
+
+
+
+
 name: Sismo Notification
 
 on:
@@ -294,24 +373,14 @@ on:
     - cron: "*/5 * * * *"  # Ejecutar cada 5 minutos
 
 jobs:
-  notify:
+  check_endpoint:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v3
-
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
-
-      - name: Restore cache
-        id: cache
-        uses: actions/cache@v3
-        with:
-          path: .sismo_cache
-          key: sismo-data-cache
 
       - name: Configure Firebase Admin
         env:
@@ -319,56 +388,55 @@ jobs:
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
 
-#      - name: Set up Firebase credentials from secrets
-#        run: |
-#          echo "TYPE=${{ secrets.TYPE }}" >> $GITHUB_ENV
-#          echo "PROJECT_ID=${{ secrets.PROJECTID }}" >> $GITHUB_ENV
-#          echo "PRIVATE_KEY_ID=${{ secrets.PRIVATEKEYID }}" >> $GITHUB_ENV
-#          echo "PRIVATE_KEY=${{ secrets.PRIVATEKEY }}" >> $GITHUB_ENV
-#          echo "CLIENT_EMAIL=${{ secrets.CLIENTEMAIL }}" >> $GITHUB_ENV
-#          echo "CLIENT_ID=${{ secrets.CLIENTID }}" >> $GITHUB_ENV
-#          echo "AUTH_URI=${{ secrets.AUTHURI }}" >> $GITHUB_ENV
-#          echo "TOKEN_URI=${{ secrets.TOKENURI }}" >> $GITHUB_ENV
-#          echo "AUTH_PROVIDER_X509_CERT_URL=${{ secrets.AUTHPROVIDERX509CERTURL }}" >> $GITHUB_ENV
-#          echo "CLIENT_X509_CERT_URL=${{ secrets.CLIENTX509CERTURL }}" >> $GITHUB_ENV
-#          echo "UNIVERSE_DOMAIN=${{ secrets.UNIVERSEDOMAIN }}" >> $GITHUB_ENV
-
-      - name: Fetch Sismo Data
-        id: fetch_sismo
-        run: |
-          mkdir -p .sismo_cache
-          LAST_SISMO=""
-          if [ -f ".sismo_cache/last_sismo.txt" ]; then
-            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
-          fi
-
-          # Obtener datos del endpoint
-          NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-          
-          # Verificar si la respuesta está vacía o curl falló
-          if [ -z "$NEW_SISMO" ]; then
-            echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
-            exit 0
-          fi
-
-          # Comparar datos
-          if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
-            echo "No hay cambios en el sismo. Finalizando tarea."
-            exit 0
-          fi
-
-          # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
-          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-
-      - name: Save cache
-        uses: actions/cache@v3
+      # Descargar el archivo persistente si existe
+      - name: Descargar variable.json persistente
+        id: download_artifact
+        uses: actions/download-artifact@v3
         with:
-          path: .sismo_cache
-          key: sismo-data-cache
+          name: variable.json
+        continue-on-error: true # No fallar si el artefacto no existe
 
-      - name: Send Notifications
-        if: env.SISMO_RESPONSE != ''
-        run: node sendNotifications.js
-        env:
-          SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
+      - name: Configurar entorno
+        run: |
+          # Si variable.json no existe, crearlo vacío
+          if [ ! -f variable.json ]; then
+            echo "{}" > variable.json
+          fi
+
+      - name: Obtener respuesta del endpoint
+        id: curl_response
+        run: |
+          # Hacer curl al endpoint y almacenar la respuesta en una variable
+          response=$(curl -s https://reportsismo.vercel.app/api/sismo)
+          echo "response=$response" >> $GITHUB_ENV
+
+      - name: Comparar respuesta
+        id: compare_response
+        run: |
+          # Leer la respuesta almacenada previamente si existe
+          old_response=$(cat variable.json | jq -r '.old_response // ""')
+
+          # Comparar la nueva respuesta con la antigua
+          if [[ "$old_response" == "$response" ]]; then
+            echo "Las respuestas son iguales. Terminando la tarea."
+            echo "updated=false" >> $GITHUB_ENV
+            exit 0
+          else
+            echo "Las respuestas son diferentes. Guardando nueva respuesta."
+            echo "{\"old_response\": \"$response\"}" > variable.json
+            echo "updated=true" >> $GITHUB_ENV
+          fi
+
+      - name: Ejecutar sendnotifications.js si hay actualización
+        if: env.updated == 'true'
+        run: |
+          # Pasar la variable al script
+          echo "$response" > response.json
+          node sendnotifications.js response.json
+
+      - name: Guardar estado actualizado
+        if: always() # Este paso se ejecuta siempre para actualizar el artefacto
+        uses: actions/upload-artifact@v3
+        with:
+          name: variable.json
+          path: variable.json
