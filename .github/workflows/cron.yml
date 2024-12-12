@@ -432,7 +432,7 @@ jobs:
         run: |
           # Pasar la variable al script
           echo "$response" > response.json
-          node sendnotifications.js response.json
+          node sendNotifications.js response.json
 
       - name: Guardar estado actualizado
         if: always() # Este paso se ejecuta siempre para actualizar el artefacto
