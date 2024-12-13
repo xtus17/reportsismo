@@ -457,51 +457,65 @@ jobs:
 
     steps:
       # Paso 1: Checkout del repositorio
-      - name: Checkout repository
+      - name: Obtener el repositorio
         uses: actions/checkout@v3
 
       # Paso 2: Configuración de Firebase Admin
-      - name: Configure Firebase Admin
+      - name: Configurar Firebase Admin
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+          echo "Archivo de credenciales Firebase creado."
 
       # Paso 3: Inicializar variable persistente si no existe
-      - name: Initialize persistent variable
+      - name: Inicializar variable persistente
         run: |
           if [ ! -f persistent_var.txt ]; then
             echo "null" > persistent_var.txt
+            echo "Archivo de variable persistente inicializado con valor 'null'."
+          else
+            echo "Archivo de variable persistente ya existe. Valor actual:"
+            cat persistent_var.txt
           fi
         shell: bash
 
       # Paso 4: Obtener la respuesta del endpoint
-      - name: Fetch response from API
-        id: fetch_api_response
+      - name: Obtener respuesta del endpoint
+        id: obtener_respuesta_api
         run: |
           API_RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
+          echo "Respuesta del endpoint obtenida: $API_RESPONSE"
           echo "response=${API_RESPONSE}" >> $GITHUB_ENV
 
       # Paso 5: Comparar valores y enviar si es necesario
-      - name: Compare values
-        id: compare_values
+      - name: Comparar valores
+        id: comparar_valores
         run: |
           PERSISTENT_VAR=$(cat persistent_var.txt)
+          echo "Valor persistente actual: $PERSISTENT_VAR"
+          echo "Respuesta del endpoint: $response"
+
           if [ "$PERSISTENT_VAR" = "$response" ]; then
-            echo "Values are equal. Exiting..."
+            echo "Los valores son iguales. Finalizando la tarea."
             exit 0
           else
-            echo "Values are different. Sending old value to sendNotifications.js..."
+            echo "Los valores son diferentes."
+            echo "Enviando valor persistente anterior a sendNotifications.js..."
             echo "$PERSISTENT_VAR" > input_for_sendNotifications.txt
-            echo "Updating persistent variable with new response..."
+            echo "Valor enviado: $PERSISTENT_VAR"
+
+            echo "Actualizando variable persistente con nueva respuesta..."
             echo "$response" > persistent_var.txt
+            echo "Nuevo valor persistente: $response"
           fi
         env:
           response: ${{ env.response }}
         shell: bash
 
       # Paso 6: Ejecutar sendNotifications.js solo si hubo un cambio
-      - name: Execute sendNotifications.js
-        if: success() && steps.compare_values.outcome == 'success'
+      - name: Ejecutar sendNotifications.js
+        if: success() && steps.comparar_valores.outcome == 'success'
         run: |
+          echo "Ejecutando sendNotifications.js con el valor persistente enviado..."
           node sendNotifications.js input_for_sendNotifications.txt
