@@ -382,6 +382,11 @@ jobs:
         with:
           node-version: "18"
 
+#- name: Check out repository
+#  uses: actions/checkout@v3
+
+
+
       - name: Configure Firebase Admin
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
