@@ -100,7 +100,7 @@ jobs:
 
       - name: Fetch new response
         run: |
-          RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
+          RESPONSE=$(curl -s https://tcpdf.org/examples/example_067/)
           echo "New Response: $RESPONSE"
           echo "$RESPONSE" > sismo_cache/response.json
 
