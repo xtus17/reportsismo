@@ -54,8 +54,7 @@
 
 
 
-
-name: Fetch sin compresion
+name: Fetch Sismo Data with Optimized Cache v2
 
 on:
   schedule:
@@ -78,8 +77,10 @@ jobs:
           echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
 
       - name: Restore cache
+        id: restore-cache
         run: |
-          if [ -f sismo_cache/response.json ]; then
+          if [ -f sismo_cache/cache.tar.gz ]; then
+            tar -xzf sismo_cache/cache.tar.gz -C sismo_cache
             echo "Cache restored successfully."
           else
             echo "No cache found."
@@ -100,5 +101,8 @@ jobs:
           echo "New Response: $RESPONSE"
           echo "$RESPONSE" > sismo_cache/response.json
 
-          # Guardar la respuesta en el cache
-          echo "$RESPONSE" > sismo_cache/response.json
+      - name: Save cache
+        id: save-cache
+        run: |
+          tar -czf sismo_cache/cache.tar.gz -C sismo_cache response.json
+          echo "Cache saved successfully."
