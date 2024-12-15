@@ -54,7 +54,8 @@
 
 
 
-name: Fetch Sismo Data with Optimized Cache v2
+
+name: cherre
 
 on:
   schedule:
@@ -65,29 +66,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Compute cache key
-        id: compute-key
-        run: |
-          mkdir -p sismo_cache
-          if [ -f sismo_cache/response.json ]; then
-            CACHE_KEY=$(cat sismo_cache/response.json | sha256sum | cut -d ' ' -f1)
-          else
-            CACHE_KEY=$(date +%s)
-          fi
-          echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
-
-      - name: Restore cache
-        id: restore-cache
-        run: |
-          if [ -f sismo_cache/cache.tar.gz ]; then
-            tar -xzf sismo_cache/cache.tar.gz -C sismo_cache
-            echo "Cache restored successfully."
-          else
-            echo "No cache found."
-          fi
+      - name: Setup cache
+        id: cache-setup
+        uses: actions/cache@v3
+        with:
+          path: sismo_cache
+          key: sismo-response-cache
+          restore-keys: |
+            sismo-response-cache
 
       - name: Load previous response
+        id: load-previous
         run: |
+          # Crear carpeta si no existe (se asegura la estructura)
+          mkdir -p sismo_cache
+          
+          # Leer el archivo de respuesta si existe
           if [ -f sismo_cache/response.json ]; then
             PREVIOUS_RESPONSE=$(cat sismo_cache/response.json)
             echo "Previous Response: $PREVIOUS_RESPONSE"
@@ -96,13 +90,16 @@ jobs:
           fi
 
       - name: Fetch new response
+        id: fetch
         run: |
+          # Hacer la petición y guardar la nueva respuesta
           RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
           echo "New Response: $RESPONSE"
           echo "$RESPONSE" > sismo_cache/response.json
 
       - name: Save cache
-        id: save-cache
+        if: ${{ steps.cache-setup.outputs.cache-hit != 'true' }}
         run: |
-          tar -czf sismo_cache/cache.tar.gz -C sismo_cache response.json
-          echo "Cache saved successfully."
+          echo "Saving cache..."
+          # Guardar la caché actualizada
+          tar -czf sismo_cache.tar.gz -C sismo_cache response.json
