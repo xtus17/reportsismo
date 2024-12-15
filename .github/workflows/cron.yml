@@ -55,7 +55,10 @@
 
 
 #"success":true,"data":["14/12/2024","10:43:18","3.6","20 km al S de Provincia Constitucional del Callao 
-name: cache minimo
+
+
+name: Fetch sismo nuevo
+
 on:
   schedule:
     - cron: "*/5 * * * *" # Ejecutar cada 5 minutos
@@ -76,15 +79,14 @@ jobs:
           else
             CONTENT_HASH="initial-cache"
           fi
-          echo "cache-key=sismo-response-cache-${CONTENT_HASH}" >> $GITHUB_ENV
-          echo "::set-output name=cache-key::sismo-response-cache-${CONTENT_HASH}"
+          echo "CACHE_KEY=sismo-response-cache-${CONTENT_HASH}" >> $GITHUB_ENV
 
       - name: Restore cache
         id: cache
         uses: actions/cache@v3
         with:
           path: sismo_cache
-          key: ${{ steps.compute-key.outputs.cache-key }}
+          key: ${{ env.CACHE_KEY }}
           restore-keys: |
             sismo-response-cache-
 
@@ -107,4 +109,4 @@ jobs:
         uses: actions/cache@v3
         with:
           path: sismo_cache
-          key: ${{ steps.compute-key.outputs.cache-key }}
+          key: ${{ env.CACHE_KEY }}
