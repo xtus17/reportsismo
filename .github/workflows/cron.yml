@@ -1,4 +1,61 @@
-name: Fetch Sismo Data with Cache
+#name: Fetch Sismo Data with Cache
+
+#on:
+#  schedule:
+#    - cron: "*/5 * * * *" # Ejecutar cada 5 minutos
+
+#jobs:
+#  fetch-data:
+#    runs-on: ubuntu-latest
+
+#    steps:
+#      - name: Compute cache key
+#        id: compute-key
+#        run: |
+          # Crear carpeta si no existe
+#          mkdir -p sismo_cache
+
+          # Generar un hash basado en un archivo existente o una constante
+#          if [ -f sismo_cache/response.json ]; then
+#            CACHE_KEY=$(cat sismo_cache/response.json | sha256sum | cut -d ' ' -f1)
+#          else
+#            CACHE_KEY=$(date +%s) # Usar timestamp si no hay datos previos
+#          fi
+#          echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
+
+#      - name: Setup cache
+#        id: cache
+#        uses: actions/cache@v3
+#        with:
+#          path: sismo_cache
+#          key: ${{ env.CACHE_KEY }}
+#          restore-keys: |
+#            sismo-response-cache-
+
+#      - name: Load previous response
+#        run: |
+          # Leer respuesta previa si existe
+#          if [ -f sismo_cache/response.json ]; then
+#            PREVIOUS_RESPONSE=$(cat sismo_cache/response.json)
+#            echo "Previous Response: $PREVIOUS_RESPONSE"
+#          else
+#            echo "No previous response found."
+#          fi
+
+#      - name: Fetch new response
+#        id: fetch
+#        run: |
+          # Realizar la petición
+#          RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
+#          echo "New Response: $RESPONSE"
+
+          # Guardar la respuesta en el cache
+#          echo "$RESPONSE" > sismo_cache/response.json
+
+
+
+
+name: Fetch Sismo Data Without Compression
 
 on:
   schedule:
@@ -12,29 +69,24 @@ jobs:
       - name: Compute cache key
         id: compute-key
         run: |
-          # Crear carpeta si no existe
           mkdir -p sismo_cache
-
-          # Generar un hash basado en un archivo existente o una constante
           if [ -f sismo_cache/response.json ]; then
             CACHE_KEY=$(cat sismo_cache/response.json | sha256sum | cut -d ' ' -f1)
           else
-            CACHE_KEY=$(date +%s) # Usar timestamp si no hay datos previos
+            CACHE_KEY=$(date +%s)
           fi
           echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
 
-      - name: Setup cache
-        id: cache
-        uses: actions/cache@v3
-        with:
-          path: sismo_cache
-          key: ${{ env.CACHE_KEY }}
-          restore-keys: |
-            sismo-response-cache-
+      - name: Restore cache
+        run: |
+          if [ -f sismo_cache/response.json ]; then
+            echo "Cache restored successfully."
+          else
+            echo "No cache found."
+          fi
 
       - name: Load previous response
         run: |
-          # Leer respuesta previa si existe
           if [ -f sismo_cache/response.json ]; then
             PREVIOUS_RESPONSE=$(cat sismo_cache/response.json)
             echo "Previous Response: $PREVIOUS_RESPONSE"
@@ -43,11 +95,10 @@ jobs:
           fi
 
       - name: Fetch new response
-        id: fetch
         run: |
-          # Realizar la petición
           RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
           echo "New Response: $RESPONSE"
+          echo "$RESPONSE" > sismo_cache/response.json
 
           # Guardar la respuesta en el cache
           echo "$RESPONSE" > sismo_cache/response.json
