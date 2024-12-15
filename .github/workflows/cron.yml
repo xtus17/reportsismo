@@ -55,7 +55,7 @@
 
 
 
-name: Fetch Sismo Data Without Compression
+name: Fetch sin compresion
 
 on:
   schedule:
