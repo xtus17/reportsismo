@@ -33,34 +33,28 @@ jobs:
         run: |
           RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
           echo "$RESPONSE" > sismo_cache/new_response.json
-          echo "::set-output name=new_response::$RESPONSE"
 
       - name: Compare responses
-        id: compare
         run: |
           if [ -f sismo_cache/response.json ]; then
-            # Comparar JSON utilizando jq para asegurar igualdad estructural
-            if jq -e --argfile a sismo_cache/response.json --argfile b sismo_cache/new_response.json '($a == $b)' >/dev/null; then
+            # Comparar JSON usando jq
+            if jq -e 'input == $a' sismo_cache/new_response.json --slurpfile a sismo_cache/response.json >/dev/null; then
               echo "The response has not changed."
-              echo "::set-output name=changed::false"
+              echo "changed=false" >> $GITHUB_ENV
             else
               echo "The response has changed."
-              echo "::set-output name=changed::true"
               cp sismo_cache/new_response.json sismo_cache/response.json
+              echo "changed=true" >> $GITHUB_ENV
             fi
           else
             echo "No previous response found. Saving new response."
             cp sismo_cache/new_response.json sismo_cache/response.json
-            echo "::set-output name=changed::true"
+            echo "changed=true" >> $GITHUB_ENV
           fi
 
       - name: Save updated cache
-        if: steps.compare.outputs.changed == 'true'
+        if: env.changed == 'true'
         uses: actions/cache@v3
         with:
           path: sismo_cache
           key: sismo-response-cache
-
-
-#"success":true,"data":["14/12/2024","10:43:18","3.6","20 km al S de Provincia Constitucional del Callao 
-
