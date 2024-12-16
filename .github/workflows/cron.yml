@@ -1,4 +1,85 @@
-name: fetch nuevo api
+  name: Sismo Notification
+
+  on:
+    schedule:
+      - cron: "*/5 * * * *"     Ejecutar cada 5 minutos
+
+  jobs:
+    notify:
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Check out repository
+          uses: actions/checkout@v3
+
+        - name: Set up Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: "18"
+
+        - name: Restore cache
+          id: cache
+          uses: actions/cache@v3
+          with:
+            path: .sismo_cache
+            key: sismo-data-cache
+
+        - name: Configure Firebase Admin
+          env:
+            FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
+          run: |
+            echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+
+        - name: Fetch Sismo Data
+          id: fetch_sismo
+          run: |
+            mkdir -p .sismo_cache
+            LAST_SISMO=""
+            if [ -f ".sismo_cache/last_sismo.txt" ]; then
+              LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
+            fi
+
+             Obtener datos del endpoint
+            NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
+          
+             Verificar si la respuesta está vacía o curl falló
+            if [ -z "$NEW_SISMO" ]; then
+              echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
+              exit 0
+            fi
+
+             Comparar datos
+            if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
+              echo "No hay cambios en el sismo. Finalizando tarea."
+              exit 0
+            fi
+
+             Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
+            echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+            echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
+
+        - name: Save cache
+          uses: actions/cache@v3
+          with:
+            path: .sismo_cache
+            key: sismo-data-cache
+
+        - name: Send Notifications
+          if: env.SISMO_RESPONSE != ''
+          run: node sendNotifications.js
+          env:
+            SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
+
+
+
+
+
+
+
+
+
+
+            name: fetch nuevo api
 
 on:
   schedule:
@@ -9,21 +90,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set up environment
-        run: mkdir -p sismo_cache
+      - name: Compute cache key
+        id: compute-key
+        run: |
+          # Crear carpeta si no existe
+          mkdir -p sismo_cache
 
-      - name: Restore cache
+          # Generar un hash basado en un archivo existente o una constante
+          if [ -f sismo_cache/response.json ]; then
+            CACHE_KEY=$(cat sismo_cache/response.json | sha256sum | cut -d ' ' -f1)
+          else
+            CACHE_KEY=$(date +%s) # Usar timestamp si no hay datos previos
+          fi
+          echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
+
+      - name: Setup cache
         id: cache
         uses: actions/cache@v3
         with:
           path: sismo_cache
-          key: sismo-response-cache
+          key: ${{ env.CACHE_KEY }}
+          restore-keys: |
+            sismo-response-cache-
 
       - name: Load previous response
         run: |
+          # Leer respuesta previa si existe
           if [ -f sismo_cache/response.json ]; then
-            echo "Previous Response:"
-            cat sismo_cache/response.json
+            PREVIOUS_RESPONSE=$(cat sismo_cache/response.json)
+            echo "Previous Response: $PREVIOUS_RESPONSE"
           else
             echo "No previous response found."
           fi
@@ -31,30 +126,9 @@ jobs:
       - name: Fetch new response
         id: fetch
         run: |
+          # Realizar la petición
           RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
-          echo "$RESPONSE" > sismo_cache/new_response.json
+          echo "New Response: $RESPONSE"
 
-      - name: Compare responses
-        run: |
-          if [ -f sismo_cache/response.json ]; then
-            # Comparar JSON usando jq
-            if jq -e 'input == $a' sismo_cache/new_response.json --slurpfile a sismo_cache/response.json >/dev/null; then
-              echo "The response has not changed."
-              echo "changed=false" >> $GITHUB_ENV
-            else
-              echo "The response has changed."
-              cp sismo_cache/new_response.json sismo_cache/response.json
-              echo "changed=true" >> $GITHUB_ENV
-            fi
-          else
-            echo "No previous response found. Saving new response."
-            cp sismo_cache/new_response.json sismo_cache/response.json
-            echo "changed=true" >> $GITHUB_ENV
-          fi
-
-      - name: Save updated cache
-        if: env.changed == 'true'
-        uses: actions/cache@v3
-        with:
-          path: sismo_cache
-          key: sismo-response-cache
+          # Guardar la respuesta en el cache
+          echo "$RESPONSE" > sismo_cache/response.json
