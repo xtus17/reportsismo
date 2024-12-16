@@ -1,4 +1,4 @@
-name: fetch nuevo api
+name: Fetch Nuevo API
 
 on:
   schedule:
@@ -9,48 +9,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Compute cache key
-        id: compute-key
-        run: |
-          # Crear carpeta si no existe
-          mkdir -p sismo_cache
+      - name: Set up cache directory
+        run: mkdir -p sismo_cache
 
-          # Generar un hash basado en un archivo existente o una constante
-          if [ -f sismo_cache/response.json ]; then
-            CACHE_KEY=$(cat sismo_cache/response.json | sha256sum | cut -d ' ' -f1)
-          else
-            CACHE_KEY=$(date +%s) # Usar timestamp si no hay datos previos
-          fi
-          echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
-
-      - name: Setup cache
+      - name: Restore cache
         id: cache
         uses: actions/cache@v3
         with:
           path: sismo_cache
-          key: ${{ env.CACHE_KEY }}
-          restore-keys: |
-            sismo-response-cache-
+          key: sismo-response-cache
 
       - name: Load previous response
+        id: load-prev
         run: |
-          # Leer respuesta previa si existe
           if [ -f sismo_cache/response.json ]; then
             PREVIOUS_RESPONSE=$(cat sismo_cache/response.json)
             echo "Previous Response: $PREVIOUS_RESPONSE"
           else
             echo "No previous response found."
+            PREVIOUS_RESPONSE=""
           fi
+          echo "PREVIOUS_RESPONSE=${PREVIOUS_RESPONSE}" >> $GITHUB_ENV
 
       - name: Fetch new response
         id: fetch
         run: |
-          # Realizar la petición
           RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
           echo "New Response: $RESPONSE"
-
-          # Guardar la respuesta en el cache
           echo "$RESPONSE" > sismo_cache/response.json
+          echo "NEW_RESPONSE=$RESPONSE" >> $GITHUB_ENV
+
+      - name: Check if cache update is needed
+        id: check-update
+        run: |
+          if [ "${{ env.PREVIOUS_RESPONSE }}" = "${{ env.NEW_RESPONSE }}" ]; then
+            echo "No update needed. Cache unchanged."
+            echo "UPDATE_CACHE=false" >> $GITHUB_ENV
+          else
+            echo "Cache needs to be updated."
+            echo "UPDATE_CACHE=true" >> $GITHUB_ENV
+
+      - name: Save updated cache
+        if: env.UPDATE_CACHE == 'true'
+        uses: actions/cache@v3
+        with:
+          path: sismo_cache
+          key: sismo-response-cache
 
 
 
