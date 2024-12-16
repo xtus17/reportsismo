@@ -1,4 +1,4 @@
-name: Fetch Nuevo API
+name: fetch nuevo api
 
 on:
   schedule:
@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set up cache directory
+      - name: Set up environment
         run: mkdir -p sismo_cache
 
       - name: Restore cache
@@ -20,42 +20,46 @@ jobs:
           key: sismo-response-cache
 
       - name: Load previous response
-        id: load-prev
         run: |
           if [ -f sismo_cache/response.json ]; then
-            PREVIOUS_RESPONSE=$(cat sismo_cache/response.json)
-            echo "Previous Response: $PREVIOUS_RESPONSE"
+            echo "Previous Response:"
+            cat sismo_cache/response.json
           else
             echo "No previous response found."
-            PREVIOUS_RESPONSE=""
           fi
-          echo "PREVIOUS_RESPONSE=${PREVIOUS_RESPONSE}" >> $GITHUB_ENV
 
       - name: Fetch new response
         id: fetch
         run: |
           RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
-          echo "New Response: $RESPONSE"
-          echo "$RESPONSE" > sismo_cache/response.json
-          echo "NEW_RESPONSE=$RESPONSE" >> $GITHUB_ENV
+          echo "$RESPONSE" > sismo_cache/new_response.json
+          echo "::set-output name=new_response::$RESPONSE"
 
-      - name: Check if cache update is needed
-        id: check-update
+      - name: Compare responses
+        id: compare
         run: |
-          if [ "${{ env.PREVIOUS_RESPONSE }}" = "${{ env.NEW_RESPONSE }}" ]; then
-            echo "No update needed. Cache unchanged."
-            echo "UPDATE_CACHE=false" >> $GITHUB_ENV
+          if [ -f sismo_cache/response.json ]; then
+            # Comparar JSON utilizando jq para asegurar igualdad estructural
+            if jq -e --argfile a sismo_cache/response.json --argfile b sismo_cache/new_response.json '($a == $b)' >/dev/null; then
+              echo "The response has not changed."
+              echo "::set-output name=changed::false"
+            else
+              echo "The response has changed."
+              echo "::set-output name=changed::true"
+              cp sismo_cache/new_response.json sismo_cache/response.json
+            fi
           else
-            echo "Cache needs to be updated."
-            echo "UPDATE_CACHE=true" >> $GITHUB_ENV
+            echo "No previous response found. Saving new response."
+            cp sismo_cache/new_response.json sismo_cache/response.json
+            echo "::set-output name=changed::true"
+          fi
 
       - name: Save updated cache
-        if: env.UPDATE_CACHE == 'true'
+        if: steps.compare.outputs.changed == 'true'
         uses: actions/cache@v3
         with:
           path: sismo_cache
           key: sismo-response-cache
-
 
 
 #"success":true,"data":["14/12/2024","10:43:18","3.6","20 km al S de Provincia Constitucional del Callao 
