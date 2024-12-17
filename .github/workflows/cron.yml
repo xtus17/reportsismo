@@ -39,7 +39,7 @@
               LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
             fi
 
-            NEW_SISMO=$(curl -s --fail https://coeseducacion.pe/sismos/ || echo "")
+            NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
           
             if [ -z "$NEW_SISMO" ]; then
               echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
