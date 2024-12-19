@@ -69,8 +69,6 @@
 
 
 
-
-
 name: Sismo Notification
 
 on:
@@ -126,6 +124,7 @@ jobs:
           if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
             echo "Los valores de la caché y del endpoint son IGUALES."
           else
-            echo "Los valores de la caché y del endpoint son DIFERENTES."
+            echo "Los valores de la caché y del endpoint son DIFERENTES. Actualizando la caché con el nuevo valor."
             echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+            echo "Nuevo valor de la caché: $(cat .sismo_cache/last_sismo.txt)"
           fi
