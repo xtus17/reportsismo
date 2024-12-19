@@ -68,6 +68,9 @@
 
 
 
+
+
+
 name: Sismo Notification
 
 on:
@@ -117,21 +120,27 @@ jobs:
             echo "No hay cambios en el sismo. Finalizando tarea."
             exit 0
           fi
+
+          # Guardar el nuevo sismo en la caché para la próxima ejecución
           echo "$SISMO_RESPONSE" > .sismo_cache/last_sismo.txt
+          echo "CHANGED=true" >> $GITHUB_ENV
 
       - name: Save cache
+        if: env.CHANGED == 'true'
         uses: actions/cache@v3
         with:
           path: .sismo_cache
           key: sismo-data-cache
 
       - name: Configure Firebase Admin
+        if: env.CHANGED == 'true'
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
 
       - name: Send Notifications
+        if: env.CHANGED == 'true'
         run: node sendNotifications.js
         env:
           SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
