@@ -109,11 +109,14 @@ jobs:
           mkdir -p .sismo_cache
           LAST_SISMO=""
           if [ -f ".sismo_cache/last_sismo.txt" ]; then
-            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt | tr -d '\\n' | tr -d '\\r')
+            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt | tr -d '\n' | tr -d '\r')
           fi
 
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-          NEW_SISMO=$(echo "$NEW_SISMO" | tr -d '\\n' | tr -d '\\r')
+          NEW_SISMO=$(echo "$NEW_SISMO" | tr -d '\n' | tr -d '\r')
+
+          echo "Response del endpoint: $NEW_SISMO"
+          echo "Valor de la caché: $LAST_SISMO"
 
           if [ -z "$NEW_SISMO" ]; then
             echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
@@ -126,4 +129,3 @@ jobs:
             echo "Los valores de la caché y del endpoint son DIFERENTES."
             echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
           fi
-
