@@ -1,79 +1,8 @@
-#  name: Sismo Notification
-
-#  on:
-#    schedule:
-#      - cron: "*/5 * * * *"     #Ejecutar cada 5 minutos
-
-#  jobs:
-#    notify:
-#      runs-on: ubuntu-latest
-
-#      steps:
-#        - name: Check out repository
-#          uses: actions/checkout@v3
-
-#        - name: Set up Node.js
-#          uses: actions/setup-node@v3
-#          with:
-#            node-version: "18"
-
-#        - name: Restore cache
-#          id: cache
-#          uses: actions/cache@v3
-#          with:
-#            path: .sismo_cache
-#            key: sismo-data-cache
-
-#        - name: Configure Firebase Admin
-#          env:
-#            FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
-#          run: |
-#            echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
-
-#        - name: Fetch Sismo Data
-#          id: fetch_sismo
-#          run: |
-#            mkdir -p .sismo_cache
-#            LAST_SISMO=""
-#            if [ -f ".sismo_cache/last_sismo.txt" ]; then
-#              LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
-#            fi
-
-#            NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-          
-#            if [ -z "$NEW_SISMO" ]; then
-#              echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
-#              exit 0
-#            fi
-
-#            if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
-#              echo "No hay cambios en el sismo. Finalizando tarea."
-#              exit 0
-#            fi
-
-#            echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-#            echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-
-#        - name: Save cache
-#          uses: actions/cache@v3
-#          with:
-#            path: .sismo_cache
-#            key: sismo-data-cache
-
-#        - name: Send Notifications
-#          if: env.SISMO_RESPONSE != ''
-#          run: node sendNotifications.js
-#          env:
-#            SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
-
-
-
-
 name: Sismo Notification
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  # Ejecutar cada 5 minutos
+    - cron: "*/5 * * * *" # Ejecutar cada 5 minutos
 
 jobs:
   notify:
@@ -95,6 +24,15 @@ jobs:
           path: .sismo_cache
           key: sismo-data-cache
 
+      - name: Mostrar cache inicial
+        run: |
+          echo "Contenido inicial de la caché:"
+          if [ -f ".sismo_cache/last_sismo.txt" ]; then
+            cat .sismo_cache/last_sismo.txt
+          else
+            echo "La caché está vacía o no existe."
+          fi
+
       - name: Configure Firebase Admin
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
@@ -107,24 +45,34 @@ jobs:
           mkdir -p .sismo_cache
           LAST_SISMO=""
           if [ -f ".sismo_cache/last_sismo.txt" ]; then
-            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt | tr -d '\n' | tr -d '\r')
+            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
           fi
 
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-          NEW_SISMO=$(echo "$NEW_SISMO" | tr -d '\n' | tr -d '\r')
-
-          echo "Response del endpoint: $NEW_SISMO"
-          echo "Valor de la caché: $LAST_SISMO"
-
+        
           if [ -z "$NEW_SISMO" ]; then
             echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
             exit 0
           fi
 
+          echo "Respuesta obtenida del endpoint:"
+          echo "$NEW_SISMO"
+
           if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
-            echo "Los valores de la caché y del endpoint son IGUALES."
-          else
-            echo "Los valores de la caché y del endpoint son DIFERENTES. Actualizando la caché con el nuevo valor."
-            echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-            echo "Nuevo valor de la caché: $(cat .sismo_cache/last_sismo.txt)"
+            echo "No hay cambios en el sismo. Finalizando tarea."
+            exit 0
           fi
+
+          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
+
+      - name: Mostrar cache actualizada
+        run: |
+          echo "Contenido actualizado de la caché:"
+          cat .sismo_cache/last_sismo.txt
+
+      - name: Save cache
+        uses: actions/cache@v3
+        with:
+          path: .sismo_cache
+          key: sismo-data-cache
