@@ -90,16 +90,6 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Fetch Sismo Data
-        id: fetch_sismo
-        run: |
-          NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-          if [ -z "$NEW_SISMO" ]; then
-            echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
-            exit 0
-          fi
-          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-
       - name: Restore cache
         id: cache
         uses: actions/cache@v3
@@ -107,8 +97,14 @@ jobs:
           path: .sismo_cache
           key: sismo-data-cache
 
-      - name: Compare Cache with New Data
-        id: compare_sismo
+      - name: Configure Firebase Admin
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+
+      - name: Fetch Sismo Data
+        id: fetch_sismo
         run: |
           mkdir -p .sismo_cache
           LAST_SISMO=""
@@ -116,31 +112,16 @@ jobs:
             LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
           fi
 
-          if [ "$LAST_SISMO" == "$SISMO_RESPONSE" ]; then
-            echo "No hay cambios en el sismo. Finalizando tarea."
+          NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
+
+          if [ -z "$NEW_SISMO" ]; then
+            echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
             exit 0
           fi
 
-          # Guardar el nuevo sismo en la caché para la próxima ejecución
-          echo "$SISMO_RESPONSE" > .sismo_cache/last_sismo.txt
-          echo "CHANGED=true" >> $GITHUB_ENV
-
-      - name: Save cache
-        if: env.CHANGED == 'true'
-        uses: actions/cache@v3
-        with:
-          path: .sismo_cache
-          key: sismo-data-cache
-
-      - name: Configure Firebase Admin
-        if: env.CHANGED == 'true'
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
-
-      - name: Send Notifications
-        if: env.CHANGED == 'true'
-        run: node sendNotifications.js
-        env:
-          SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
+          if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
+            echo "Los valores de la caché y del endpoint son IGUALES."
+          else
+            echo "Los valores de la caché y del endpoint son DIFERENTES."
+            echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          fi
