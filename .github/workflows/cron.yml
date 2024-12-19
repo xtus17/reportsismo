@@ -17,21 +17,21 @@ jobs:
         with:
           node-version: "18"
 
+      - name: Mostrar caché inicial
+        run: |
+          echo "Mostrando caché inicial:"
+          if [ -f ".sismo_cache/last_sismo.txt" ]; then
+            cat .sismo_cache/last_sismo.txt
+          else
+            echo "No existe un archivo de caché inicial."
+          fi
+
       - name: Restore cache
         id: cache
         uses: actions/cache@v3
         with:
           path: .sismo_cache
           key: sismo-data-cache
-
-      - name: Mostrar cache inicial
-        run: |
-          echo "Contenido inicial de la caché:"
-          if [ -f ".sismo_cache/last_sismo.txt" ]; then
-            cat .sismo_cache/last_sismo.txt
-          else
-            echo "La caché está vacía o no existe."
-          fi
 
       - name: Configure Firebase Admin
         env:
@@ -48,31 +48,36 @@ jobs:
             LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
           fi
 
+          echo "Último sismo en caché: $LAST_SISMO"
+
+          # Obtener datos del endpoint
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-        
+
+          # Verificar si la respuesta está vacía o curl falló
           if [ -z "$NEW_SISMO" ]; then
             echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
             exit 0
           fi
 
-          echo "Respuesta obtenida del endpoint:"
-          echo "$NEW_SISMO"
+          echo "Datos del nuevo sismo: $NEW_SISMO"
 
+          # Comparar datos
           if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
             echo "No hay cambios en el sismo. Finalizando tarea."
             exit 0
           fi
 
+          # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
           echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
           echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
 
-      - name: Mostrar cache actualizada
-        run: |
-          echo "Contenido actualizado de la caché:"
-          cat .sismo_cache/last_sismo.txt
-
-      - name: Save cache
+      - name: Guardar caché actualizada
         uses: actions/cache@v3
         with:
           path: .sismo_cache
           key: sismo-data-cache
+
+      - name: Mostrar caché final
+        run: |
+          echo "Mostrando caché actualizada:"
+          cat .sismo_cache/last_sismo.txt
