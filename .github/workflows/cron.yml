@@ -56,16 +56,30 @@ jobs:
         id: fetch
         run: |
           RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo | tr -d '\n' | tr -d ' ')
+          if [ -z "$RESPONSE" ]; then
+            echo "El curl devolvió un response vacío."
+            exit 1
+          fi
           echo "RESPONSE=$RESPONSE" >> $GITHUB_ENV
           echo "New Response: $RESPONSE"
 
       - name: Compare responses
+        id: compare
         run: |
           if [ "${{ env.PREVIOUS_RESPONSE }}" = "${{ env.RESPONSE }}" ]; then
             echo "El valor de la caché y la nueva respuesta son iguales."
+            echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
           else
             echo "El valor de la caché y la nueva respuesta son diferentes."
+            echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
           fi
+
+      - name: Notificar si son diferentes
+        if: env.SHOULD_NOTIFY == 'true'
+        run: |
+          echo "Ejecutando sendNotifications.js con el nuevo response..."
+          echo "${{ env.RESPONSE }}" > response.json
+          node sendNotifications.js response.json
 
       - name: Actualizar y mostrar caché final
         run: |
