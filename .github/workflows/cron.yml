@@ -44,7 +44,7 @@ jobs:
         id: load-response
         run: |
           if [ -f sismo_cache/response.json ]; then
-            PREVIOUS_RESPONSE=$(cat sismo_cache/response.json)
+            PREVIOUS_RESPONSE=$(cat sismo_cache/response.json | tr -d '\n' | tr -d ' ')
             echo "PREVIOUS_RESPONSE=$PREVIOUS_RESPONSE" >> $GITHUB_ENV
             echo "Previous Response: $PREVIOUS_RESPONSE"
           else
@@ -55,7 +55,7 @@ jobs:
       - name: Fetch new response
         id: fetch
         run: |
-          RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
+          RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo | tr -d '\n' | tr -d ' ')
           echo "RESPONSE=$RESPONSE" >> $GITHUB_ENV
           echo "New Response: $RESPONSE"
 
