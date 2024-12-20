@@ -22,14 +22,12 @@ jobs:
       - name: Compute cache key
         id: compute-key
         run: |
-          # Crear carpeta si no existe
           mkdir -p sismo_cache
 
-          # Generar un hash basado en un archivo existente o una constante
           if [ -f sismo_cache/response.json ]; then
             CACHE_KEY=$(cat sismo_cache/response.json | sha256sum | cut -d ' ' -f1)
           else
-            CACHE_KEY=$(date +%s) # Usar timestamp si no hay datos previos
+            CACHE_KEY=$(date +%s)
           fi
           echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
 
@@ -43,28 +41,34 @@ jobs:
             sismo-response-cache-
 
       - name: Load previous response
+        id: load-response
         run: |
           if [ -f sismo_cache/response.json ]; then
             PREVIOUS_RESPONSE=$(cat sismo_cache/response.json)
+            echo "PREVIOUS_RESPONSE=$PREVIOUS_RESPONSE" >> $GITHUB_ENV
             echo "Previous Response: $PREVIOUS_RESPONSE"
           else
             echo "No previous response found."
+            echo "PREVIOUS_RESPONSE=" >> $GITHUB_ENV
           fi
 
       - name: Fetch new response
         id: fetch
         run: |
-          # Realizar la petición
           RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
+          echo "RESPONSE=$RESPONSE" >> $GITHUB_ENV
           echo "New Response: $RESPONSE"
+
+      - name: Compare responses
+        run: |
+          if [ "${{ env.PREVIOUS_RESPONSE }}" = "${{ env.RESPONSE }}" ]; then
+            echo "El valor de la caché y la nueva respuesta son iguales."
+          else
+            echo "El valor de la caché y la nueva respuesta son diferentes."
+          fi
 
       - name: Actualizar y mostrar caché final
         run: |
-          # Actualizar la caché con el nuevo valor
-          RESPONSE=$(curl -s https://reportsismo.vercel.app/api/sismo)
-          echo "Actualizando caché con el nuevo valor..."
-          echo "$RESPONSE" > sismo_cache/response.json
-          
-          # Mostrar caché actualizada
+          echo "${{ env.RESPONSE }}" > sismo_cache/response.json
           echo "Valor actualizado de la caché:"
           cat sismo_cache/response.json
