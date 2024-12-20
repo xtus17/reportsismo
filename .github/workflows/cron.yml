@@ -75,7 +75,7 @@ jobs:
           fi
 
       - name: Notificar si son diferentes
-        if: env.SHOULD_NOTIFY == 'true'
+        if: env.SHOULD_NOTIFY == 'false'
         run: |
           echo "Ejecutando sendNotifications.js con el nuevo response..."
           echo "${{ env.RESPONSE }}" > response.json
