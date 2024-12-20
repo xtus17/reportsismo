@@ -74,24 +74,17 @@ jobs:
             echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
           fi
 
-    - name: Notificar si son diferentes
-      if: env.SHOULD_NOTIFY == 'false'  # Solo ejecuta este paso si SHOULD_NOTIFY es 'false'
-      run: |
-        # Realizar el curl a la API de sismo
-        NEW_SISMO=$(curl -s https://reportsismo.vercel.app/api/sismo)
-        
-        # Guardar la respuesta en un archivo
-        echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-        
-        # Guardar la respuesta en una variable de entorno
-        echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-        
-        # Verificar si la respuesta no está vacía y ejecutar el script de notificaciones
-        if [ -n "${NEW_SISMO}" ]; then
-          node sendNotifications.js
-        else
-          echo "No hay nueva respuesta de sismo, no se enviarán notificaciones."
-        fi
+      - name: Notificar si son diferentes
+        if: env.SHOULD_NOTIFY == 'true' # Asegúrate de que el valor sea true aquí
+        run: |
+          NEW_SISMO=$(curl -s https://reportsismo.vercel.app/api/sismo)
+          echo "$NEW_SISMO" > sismo_cache/last_sismo.txt
+          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
+          if [ -n "${NEW_SISMO}" ]; then
+            node sendNotifications.js
+          else
+            echo "No hay nueva respuesta de sismo, no se enviarán notificaciones."
+          fi
 
       - name: Actualizar y mostrar caché final
         run: |
