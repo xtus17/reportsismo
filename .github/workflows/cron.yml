@@ -34,21 +34,17 @@ jobs:
         id: fetch_sismo
         run: |
           mkdir -p .sismo_cache
-          VALOR_CACHE=""
+          LAST_SISMO=""
           if [ -f ".sismo_cache/last_sismo.txt" ]; then
-            VALOR_CACHE=$(cat .sismo_cache/last_sismo.txt)
+            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
           fi
 
           # Obtener datos del endpoint
-          RESPONSE_CURL=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-
-          # Mostrar el response y la cache antes de guardarlos
-          echo "Respuesta de CURL: $RESPONSE_CURL"
-          echo "Valor de la caché: $VALOR_CACHE"
+          NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
 
           # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
-          echo "$RESPONSE_CURL" > .sismo_cache/last_sismo.txt
-          echo "SISMO_RESPUESTA=${RESPONSE_CURL}" >> $GITHUB_ENV
+          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
 
       - name: Save cache
         uses: actions/cache@v3
@@ -57,7 +53,7 @@ jobs:
           key: sismo-data-cache
 
       - name: Send Notifications
-        if: env.SISMO_RESPUESTA != ''
+        if: env.SISMO_RESPONSE != ''
         run: node sendNotifications.js
         env:
-          SISMO_RESPUESTA: ${{ env.SISMO_RESPUESTA }}
+          SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
