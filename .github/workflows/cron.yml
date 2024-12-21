@@ -35,6 +35,30 @@ jobs:
           echo "RESPONSE=$RESPONSE" >> $GITHUB_ENV
           echo "Nuevo Response: $RESPONSE"
 
+      - name: Load previous response
+        id: load-response
+        run: |
+          if [ -f sismo_cache/response.json ]; then
+            PREVIOUS_RESPONSE=$(cat sismo_cache/response.json | tr -d '\n' | tr -d ' ')
+            echo "PREVIOUS_RESPONSE=$PREVIOUS_RESPONSE" >> $GITHUB_ENV
+            echo "Previous Response: $PREVIOUS_RESPONSE"
+          else
+            echo "No previous response found."
+            echo "PREVIOUS_RESPONSE=" >> $GITHUB_ENV
+          fi
+
+      - name: Compare responses
+        id: compare
+        run: |
+          echo "Comparando respuestas..."
+          if [ "${{ env.PREVIOUS_RESPONSE }}" = "${{ env.RESPONSE }}" ]; then
+            echo "El valor de la caché y la nueva respuesta son iguales."
+            echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
+          else
+            echo "El valor de la caché y la nueva respuesta son diferentes."
+            echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
+          fi
+          
       - name: Compute cache key
         id: compute-key
         run: |
@@ -52,7 +76,6 @@ jobs:
           echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
           echo "CACHE_KEY calculado: sismo-response-cache-$CACHE_KEY"
 
-      # Paso para configurar la caché
       - name: Setup cache
         id: cache
         uses: actions/cache@v3
@@ -62,36 +85,6 @@ jobs:
           restore-keys: |
             sismo-response-cache-
 
-      # Paso separado para el echo de configuración de caché
-      - name: Echo setup cache
-        run: |
-          echo "Configurando la caché con la clave: ${{ env.CACHE_KEY }}"
-
-      - name: Fetch Sismo Data
-        id: fetch_sismo
-        run: |
-          mkdir -p .sismo_cache
-          LAST_SISMO=""
-          if [ -f ".sismo_cache/last_sismo.txt" ]; then
-            LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
-          fi
-          echo "Último sismo almacenado: $LAST_SISMO"
-
-          # Obtener datos del endpoint
-          NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-          echo "Nuevo sismo obtenido: $NEW_SISMO"
-
-          if [ -z "$NEW_SISMO" ]; then
-            echo "No se pudieron obtener datos del sismo."
-            exit 1
-          fi
-
-          # Guardar la respuesta del sismo en una variable de entorno
-          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-          echo "Nuevo SISMO_RESPONSE guardado: $NEW_SISMO"
-          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-          echo "Último sismo guardado en archivo: $(cat .sismo_cache/last_sismo.txt)"
-
       - name: Actualizar y mostrar caché final
         run: |
           # Actualiza el caché con la nueva respuesta del sismo
@@ -99,7 +92,7 @@ jobs:
           echo "Valor actualizado de la caché: $(cat sismo_cache/response.json)"
 
       - name: Send Notifications
-        if: env.SISMO_RESPONSE != ''
+        if: env.SHOULD_NOTIFY == 'true'
         run: |
           echo "Enviando notificaciones con el siguiente SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}"
           node sendNotifications.js
