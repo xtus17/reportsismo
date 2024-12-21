@@ -81,7 +81,7 @@ jobs:
           fi
 
       - name: Notificar si son diferentes
-        if: env.SHOULD_NOTIFY == 'false'
+        if: env.SHOULD_NOTIFY == 'true'
         run: |
           # Obtener el nuevo response
           NEW_SISMO=$(curl -s https://reportsismo.vercel.app/api/sismo)
