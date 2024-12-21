@@ -24,6 +24,16 @@ jobs:
           path: .sismo_cache
           key: sismo-data-cache
 
+      - name: Display initial cache value
+        run: |
+          echo "Verificando contenido inicial de la caché..."
+          if [ -f ".sismo_cache/last_sismo.txt" ]; then
+            echo "Valor inicial del caché:"
+            cat .sismo_cache/last_sismo.txt
+          else
+            echo "El archivo de caché .sismo_cache/last_sismo.txt no existe."
+          fi
+
       - name: Configure Firebase Admin
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
@@ -38,9 +48,11 @@ jobs:
           if [ -f ".sismo_cache/last_sismo.txt" ]; then
             LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
           fi
+          echo "Último sismo desde la caché: $LAST_SISMO"
 
           # Obtener datos del endpoint
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
+          echo "Nuevo sismo obtenido desde el endpoint: $NEW_SISMO"
 
           # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
           echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
@@ -52,8 +64,15 @@ jobs:
           path: .sismo_cache
           key: sismo-data-cache
 
+      - name: Display final response value
+        run: |
+          echo "Valor final de SISMO_RESPONSE:"
+          echo "${{ env.SISMO_RESPONSE }}"
+
       - name: Send Notifications
         if: env.SISMO_RESPONSE != ''
-        run: node sendNotifications.js
+        run: |
+          echo "Enviando notificaciones con SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}"
+          node sendNotifications.js
         env:
           SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
