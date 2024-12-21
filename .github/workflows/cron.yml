@@ -81,14 +81,17 @@ jobs:
           fi
 
       - name: Notificar si son diferentes
-        if: env.SHOULD_NOTIFY == 'true'
+        if: env.SHOULD_NOTIFY == 'false'
         run: |
           # Obtener el nuevo response
-          NEW_SISMO=$(curl -s https://reportsismo.vercel.app/api/sismo)
+          NEW_SISMO=$(curl -s https://reportsismo.vercel.app/api/sismo | tr -d '\n')
+          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
           echo "Nuevo response obtenido: $NEW_SISMO"
-          
-          # Ejecutar el script de notificaciones con el response como parámetro
-          node sendNotifications.js "$NEW_SISMO"
+
+          # Ejecutar el script de notificaciones
+          node sendNotifications.js
+        env:
+          SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
 
       - name: Actualizar y mostrar caché final
         run: |
