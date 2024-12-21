@@ -34,32 +34,21 @@ jobs:
         id: fetch_sismo
         run: |
           mkdir -p .sismo_cache
-          ULTIMO_SISMO=""
+          VALOR_CACHE=""
           if [ -f ".sismo_cache/last_sismo.txt" ]; then
-            ULTIMO_SISMO=$(cat .sismo_cache/last_sismo.txt)
+            VALOR_CACHE=$(cat .sismo_cache/last_sismo.txt)
           fi
 
           # Obtener datos del endpoint
-          NUEVO_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
+          RESPONSE_CURL=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
 
-          # Eliminar saltos de línea y espacios de la respuesta y de la caché
-          NUEVO_SISMO_LIMPIO=$(echo "$NUEVO_SISMO" | tr -d '\n' | tr -d ' ')
-          ULTIMO_SISMO_LIMPIO=$(echo "$ULTIMO_SISMO" | tr -d '\n' | tr -d ' ')
-
-          # Mostrar el contenido antes de comparar
-          echo "Esto es la caché: $ULTIMO_SISMO_LIMPIO"
-          echo "Esto es el response: $NUEVO_SISMO_LIMPIO"
-
-          # Comparar las respuestas
-          if [ "$NUEVO_SISMO_LIMPIO" == "$ULTIMO_SISMO_LIMPIO" ]; then
-            echo "Las respuestas son iguales."
-          else
-            echo "Las respuestas son diferentes."
-          fi
+          # Mostrar el response y la cache antes de guardarlos
+          echo "Respuesta de CURL: $RESPONSE_CURL"
+          echo "Valor de la caché: $VALOR_CACHE"
 
           # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
-          echo "$NUEVO_SISMO" > .sismo_cache/last_sismo.txt
-          echo "SISMO_RESPUESTA=${NUEVO_SISMO}" >> $GITHUB_ENV
+          echo "$RESPONSE_CURL" > .sismo_cache/last_sismo.txt
+          echo "SISMO_RESPUESTA=${RESPONSE_CURL}" >> $GITHUB_ENV
 
       - name: Save cache
         uses: actions/cache@v3
