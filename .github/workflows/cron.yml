@@ -82,7 +82,12 @@ jobs:
         env:
           SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
 
-      - name: Log if Cache and Response are Same
-        if: env.CACHE_RESPONSE != ''
+      - name: Display final cache value
         run: |
-          echo "La caché y el response son iguales: ${{ env.CACHE_RESPONSE }}"
+          echo "Verificando contenido final de la caché..."
+          if [ -f ".sismo_cache/last_sismo.txt" ]; then
+            echo "Valor final del caché:"
+            cat .sismo_cache/last_sismo.txt
+          else
+            echo "El archivo de caché .sismo_cache/last_sismo.txt no existe."
+          fi
