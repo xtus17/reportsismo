@@ -9,6 +9,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v3
+
+      - name: Instalar dependencias
+        run: npm install
+
       - name: Mostrar caché inicial
         run: |
           mkdir -p sismo_cache
@@ -75,16 +81,14 @@ jobs:
           fi
 
       - name: Notificar si son diferentes
-        if: env.SHOULD_NOTIFY == 'true' # Asegúrate de que el valor sea true aquí
+        if: env.SHOULD_NOTIFY == 'false'
         run: |
+          # Obtener el nuevo response
           NEW_SISMO=$(curl -s https://reportsismo.vercel.app/api/sismo)
-          echo "$NEW_SISMO" > sismo_cache/last_sismo.txt
-          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-          if [ -n "${NEW_SISMO}" ]; then
-            node sendNotifications.js
-          else
-            echo "No hay nueva respuesta de sismo, no se enviarán notificaciones."
-          fi
+          echo "Nuevo response obtenido: $NEW_SISMO"
+          
+          # Ejecutar el script de notificaciones con el response como parámetro
+          node sendNotifications.js "$NEW_SISMO"
 
       - name: Actualizar y mostrar caché final
         run: |
