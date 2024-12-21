@@ -1,30 +1,30 @@
-name: Sismo Notification
+name: Notificación de Sismos
 
 on:
   schedule:
     - cron: "*/5 * * * *"  # Ejecutar cada 5 minutos
 
 jobs:
-  notify:
+  notificar:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Verificar repositorio
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
 
-      - name: Restore cache
+      - name: Restaurar caché
         id: cache
         uses: actions/cache@v3
         with:
           path: .sismo_cache
           key: sismo-data-cache
 
-      - name: Display initial cache value
+      - name: Mostrar valor inicial de la caché
         run: |
           echo "Verificando contenido inicial de la caché..."
           if [ -f ".sismo_cache/last_sismo.txt" ]; then
@@ -34,13 +34,13 @@ jobs:
             echo "El archivo de caché .sismo_cache/last_sismo.txt no existe."
           fi
 
-      - name: Configure Firebase Admin
+      - name: Configurar Firebase Admin
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
 
-      - name: Fetch Sismo Data
+      - name: Obtener datos de sismos
         id: fetch_sismo
         run: |
           mkdir -p .sismo_cache
@@ -60,21 +60,20 @@ jobs:
           if [ "$NEW_SISMO" != "$LAST_SISMO" ]; then
             echo "Los valores son diferentes: (Cache) $LAST_SISMO != (Response) $NEW_SISMO"
             echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
+            echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt  # Actualizar caché solo si son diferentes
           else
             echo "Los valores son iguales: (Cache) $LAST_SISMO == (Response) $NEW_SISMO"
             echo "CACHE_RESPONSE=${LAST_SISMO}" >> $GITHUB_ENV
           fi
 
-          # Guardar el nuevo sismo en el caché
-          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-
-      - name: Save cache
+      - name: Guardar caché
+        if: env.SISMO_RESPONSE != ''  # Guardar solo si se actualizó la caché
         uses: actions/cache@v3
         with:
           path: .sismo_cache
           key: sismo-data-cache
 
-      - name: Send Notifications if Different
+      - name: Enviar notificaciones si son diferentes
         if: env.SISMO_RESPONSE != ''
         run: |
           echo "Enviando notificaciones con SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}"
@@ -82,7 +81,7 @@ jobs:
         env:
           SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
 
-      - name: Log if Cache and Response are Same
+      - name: Registrar si caché y respuesta son iguales
         if: env.CACHE_RESPONSE != ''
         run: |
           echo "La caché y el response son iguales: ${{ env.CACHE_RESPONSE }}"
