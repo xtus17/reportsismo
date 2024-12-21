@@ -45,6 +45,8 @@ jobs:
         run: |
           mkdir -p .sismo_cache
           LAST_SISMO=""
+
+          # Leer último valor de la caché si existe
           if [ -f ".sismo_cache/last_sismo.txt" ]; then
             LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
           fi
@@ -54,17 +56,17 @@ jobs:
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
           echo "Nuevo sismo obtenido desde el endpoint: $NEW_SISMO"
 
-          # Guardar el nuevo sismo en el caché
-          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-
-          # Comparar valores
+          # Comparar valores y exportar resultado como variable de entorno
           if [ "$NEW_SISMO" != "$LAST_SISMO" ]; then
             echo "Los valores son diferentes: (Cache) $LAST_SISMO != (Response) $NEW_SISMO"
-            echo "DIFFERENT=true" >> $GITHUB_ENV
+            echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
           else
             echo "Los valores son iguales: (Cache) $LAST_SISMO == (Response) $NEW_SISMO"
-            echo "DIFFERENT=false" >> $GITHUB_ENV
+            echo "CACHE_RESPONSE=${LAST_SISMO}" >> $GITHUB_ENV
+          fi
+
+          # Guardar el nuevo sismo en el caché
+          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
 
       - name: Save cache
         uses: actions/cache@v3
@@ -72,13 +74,15 @@ jobs:
           path: .sismo_cache
           key: sismo-data-cache
 
-      - name: Take action based on comparison
+      - name: Send Notifications if Different
+        if: env.SISMO_RESPONSE != ''
         run: |
-          if [ "${{ env.DIFFERENT }}" = "true" ]; then
-            echo "Enviando notificaciones con SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}"
-            node sendNotifications.js
-          else
-            echo "Los valores son iguales. No se enviarán notificaciones."
+          echo "Enviando notificaciones con SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}"
+          node sendNotifications.js
         env:
           SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
-          DIFFERENT: ${{ env.DIFFERENT }}
+
+      - name: Log if Cache and Response are Same
+        if: env.CACHE_RESPONSE != ''
+        run: |
+          echo "La caché y el response son iguales: ${{ env.CACHE_RESPONSE }}"
