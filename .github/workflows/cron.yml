@@ -1,68 +1,28 @@
-name: fetch nuevo api
+name: Sismo Notification
 
 on:
   schedule:
-    - cron: "*/5 * * * *" # Ejecutar cada 5 minutos
+    - cron: "*/5 * * * *"  # Ejecutar cada 5 minutos
 
 jobs:
   notify:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout del repositorio
+      - name: Check out repository
         uses: actions/checkout@v3
 
-      - name: Instalar dependencias
-        run: npm install
-
-      - name: Mostrar caché inicial
-        run: |
-          mkdir -p sismo_cache
-          if [ -f sismo_cache/response.json ]; then
-            echo "Valor actual de la caché:"
-            cat sismo_cache/response.json
-          else
-            echo "No se encontró una caché inicial."
-          fi
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
 
       - name: Configure Firebase Admin
         env:
-            FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: |
-            echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
-
-      - name: Compute cache key
-        id: compute-key
-        run: |
-          mkdir -p sismo_cache
-
-          if [ -f sismo_cache/response.json ]; then
-            CACHE_KEY=$(cat sismo_cache/response.json | sha256sum | cut -d ' ' -f1)
-          else
-            CACHE_KEY=$(date +%s)
-          fi
-          echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
-
-      - name: Setup cache
-        id: cache
-        uses: actions/cache@v3
-        with:
-          path: sismo_cache
-          key: ${{ env.CACHE_KEY }}
-          restore-keys: |
-            sismo-response-cache-
-
-      - name: Load previous response
-        id: load-response
-        run: |
-          if [ -f sismo_cache/response.json ]; then
-            PREVIOUS_RESPONSE=$(cat sismo_cache/response.json | tr -d '\n' | tr -d ' ')
-            echo "PREVIOUS_RESPONSE=$PREVIOUS_RESPONSE" >> $GITHUB_ENV
-            echo "Previous Response: $PREVIOUS_RESPONSE"
-          else
-            echo "No previous response found."
-            echo "PREVIOUS_RESPONSE=" >> $GITHUB_ENV
-          fi
+          echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+          echo "Contenido de FIREBASE_SERVICE_ACCOUNT: $FIREBASE_SERVICE_ACCOUNT"
 
       - name: Fetch new response
         id: fetch
@@ -73,40 +33,71 @@ jobs:
             exit 1
           fi
           echo "RESPONSE=$RESPONSE" >> $GITHUB_ENV
-          echo "New Response: $RESPONSE"
+          echo "Nuevo Response: $RESPONSE"
 
-      - name: Compare responses
-        id: compare
+      - name: Compute cache key
+        id: compute-key
         run: |
-          if [ "${{ env.PREVIOUS_RESPONSE }}" = "${{ env.RESPONSE }}" ]; then
-            echo "El valor de la caché y la nueva respuesta son iguales."
-            echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
-          else
-            echo "El valor de la caché y la nueva respuesta son diferentes."
-            echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
-          fi
+          mkdir -p sismo_cache
+          
+          # Guarda la respuesta del sismo en el archivo antes de calcular la clave del caché
+          echo "${{ env.RESPONSE }}" > sismo_cache/response.json
+          echo "Respuesta guardada en el archivo de caché: $(cat sismo_cache/response.json)"
 
-      - name: Notificar si son diferentes
-        if: env.SHOULD_NOTIFY == 'false'
+          if [ -f sismo_cache/response.json ]; then
+            CACHE_KEY=$(cat sismo_cache/response.json | sha256sum | cut -d ' ' -f1)
+          else
+            CACHE_KEY=$(date +%s)
+          fi
+          echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
+          echo "CACHE_KEY calculado: sismo-response-cache-$CACHE_KEY"
+
+      - name: Setup cache
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: sismo_cache
+          key: ${{ env.CACHE_KEY }}
+          restore-keys: |
+            sismo-response-cache-
+        run: |
+          echo "Configurando la caché con la clave: ${{ env.CACHE_KEY }}"
+
+      - name: Fetch Sismo Data
+        id: fetch_sismo
         run: |
           mkdir -p .sismo_cache
-
-          # Obtener el último sismo guardado
           LAST_SISMO=""
           if [ -f ".sismo_cache/last_sismo.txt" ]; then
             LAST_SISMO=$(cat .sismo_cache/last_sismo.txt)
           fi
+          echo "Último sismo almacenado: $LAST_SISMO"
 
           # Obtener datos del endpoint
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
+          echo "Nuevo sismo obtenido: $NEW_SISMO"
 
-          # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
-          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          if [ -z "$NEW_SISMO" ]; then
+            echo "No se pudieron obtener datos del sismo."
+            exit 1
+          fi
+
+          # Guardar la respuesta del sismo en una variable de entorno
           echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-          echo "Nuevo response obtenido: $NEW_SISMO"
+          echo "Nuevo SISMO_RESPONSE guardado: $NEW_SISMO"
+          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          echo "Último sismo guardado en archivo: $(cat .sismo_cache/last_sismo.txt)"
 
       - name: Actualizar y mostrar caché final
         run: |
-          echo "${{ env.RESPONSE }}" > sismo_cache/response.json
-          echo "Valor actualizado de la caché:"
-          cat sismo_cache/response.json
+          # Actualiza el caché con la nueva respuesta del sismo
+          echo "${{ env.SISMO_RESPONSE }}" > sismo_cache/response.json
+          echo "Valor actualizado de la caché: $(cat sismo_cache/response.json)"
+
+      - name: Send Notifications
+        if: env.SISMO_RESPONSE != ''
+        run: |
+          echo "Enviando notificaciones con el siguiente SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}"
+          node sendNotifications.js
+        env:
+          SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
