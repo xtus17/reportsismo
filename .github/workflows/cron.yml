@@ -52,6 +52,7 @@ jobs:
           echo "CACHE_KEY=sismo-response-cache-$CACHE_KEY" >> $GITHUB_ENV
           echo "CACHE_KEY calculado: sismo-response-cache-$CACHE_KEY"
 
+      # Paso para configurar la caché
       - name: Setup cache
         id: cache
         uses: actions/cache@v3
@@ -60,6 +61,9 @@ jobs:
           key: ${{ env.CACHE_KEY }}
           restore-keys: |
             sismo-response-cache-
+
+      # Paso separado para el echo de configuración de caché
+      - name: Echo setup cache
         run: |
           echo "Configurando la caché con la clave: ${{ env.CACHE_KEY }}"
 
