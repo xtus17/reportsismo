@@ -42,18 +42,6 @@ jobs:
 
           # Obtener datos del endpoint
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
-          
-          # Verificar si la respuesta está vacía o curl falló
-          if [ -z "$NEW_SISMO" ]; then
-            echo "La respuesta del endpoint está vacía o la solicitud falló. Finalizando tarea."
-            exit 0
-          fi
-
-          # Comparar datos
-          if [ "$LAST_SISMO" == "$NEW_SISMO" ]; then
-            echo "No hay cambios en el sismo. Finalizando tarea."
-            exit 0
-          fi
 
           # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
           echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
