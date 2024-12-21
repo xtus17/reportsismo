@@ -18,11 +18,13 @@ jobs:
           node-version: "18"
 
       - name: Restore cache
-        id: cache
+        id: restore-cache
         uses: actions/cache@v3
         with:
           path: .sismo_cache
-          key: sismo-data-cache
+          key: sismo-data-cache-${{ runner.os }}-${{ hashFiles('.sismo_cache/last_sismo.txt') }}
+          restore-keys: |
+            sismo-data-cache-${{ runner.os }}-
 
       - name: Display initial cache value
         run: |
@@ -72,7 +74,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .sismo_cache
-          key: sismo-data-cache
+          key: sismo-data-cache-${{ runner.os }}-${{ hashFiles('.sismo_cache/last_sismo.txt') }}
 
       - name: Send Notifications if Different
         if: env.SISMO_RESPONSE != ''
