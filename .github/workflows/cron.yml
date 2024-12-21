@@ -54,6 +54,13 @@ jobs:
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
           echo "Nuevo sismo obtenido desde el endpoint: $NEW_SISMO"
 
+          # Comparar valores
+          if [ "$NEW_SISMO" != "$LAST_SISMO" ]; then
+            echo "Los valores son diferentes: (Cache) $LAST_SISMO != (Response) $NEW_SISMO"
+          else
+            echo "Los valores son iguales: (Cache) $LAST_SISMO == (Response) $NEW_SISMO"
+          fi
+
           # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
           echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
           echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
