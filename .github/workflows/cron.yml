@@ -84,7 +84,7 @@ jobs:
         if: env.SHOULD_NOTIFY == 'false'
         run: |
           # Obtener el nuevo response
-          NEW_SISMO=$(curl -s https://reportsismo.vercel.app/api/sismo | tr -d '\n')
+          NEW_SISMO=$(curl -s https://reportsismo.vercel.app/api/sismo)
           echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
           echo "Nuevo response obtenido: $NEW_SISMO"
 
