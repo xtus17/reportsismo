@@ -54,16 +54,17 @@ jobs:
           NEW_SISMO=$(curl -s --fail https://reportsismo.vercel.app/api/sismo || echo "")
           echo "Nuevo sismo obtenido desde el endpoint: $NEW_SISMO"
 
+          # Guardar el nuevo sismo en el caché
+          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
+
           # Comparar valores
           if [ "$NEW_SISMO" != "$LAST_SISMO" ]; then
             echo "Los valores son diferentes: (Cache) $LAST_SISMO != (Response) $NEW_SISMO"
+            echo "DIFFERENT=true" >> $GITHUB_ENV
           else
             echo "Los valores son iguales: (Cache) $LAST_SISMO == (Response) $NEW_SISMO"
-          fi
-
-          # Guardar el nuevo sismo en el caché y exportarlo como variable de entorno
-          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-          echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
+            echo "DIFFERENT=false" >> $GITHUB_ENV
 
       - name: Save cache
         uses: actions/cache@v3
@@ -71,15 +72,13 @@ jobs:
           path: .sismo_cache
           key: sismo-data-cache
 
-      - name: Display final response value
+      - name: Take action based on comparison
         run: |
-          echo "Valor final de SISMO_RESPONSE:"
-          echo "${{ env.SISMO_RESPONSE }}"
-
-      - name: Send Notifications
-        if: env.SISMO_RESPONSE != ''
-        run: |
-          echo "Enviando notificaciones con SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}"
-          node sendNotifications.js
+          if [ "${{ env.DIFFERENT }}" = "true" ]; then
+            echo "Enviando notificaciones con SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}"
+            node sendNotifications.js
+          else
+            echo "Los valores son iguales. No se enviarán notificaciones."
         env:
           SISMO_RESPONSE: ${{ env.SISMO_RESPONSE }}
+          DIFFERENT: ${{ env.DIFFERENT }}
