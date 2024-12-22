@@ -22,9 +22,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .sismo_cache
-          key: sismo-data-cache-${{ runner.os }}-${{ hashFiles('.sismo_cache/last_sismo.txt') }}
+          key: sismo-data-cache-${{ runner.os }}
           restore-keys: |
-            sismo-data-cache-${{ runner.os }}-
+            sismo-data-cache-${{ runner.os }}
 
       - name: Display initial cache value
         run: |
@@ -64,17 +64,18 @@ jobs:
             echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
           else
             echo "Los valores son iguales: (Cache) $LAST_SISMO == (Response) $NEW_SISMO"
-            echo "CACHE_RESPONSE=${LAST_SISMO}" >> $GITHUB_ENV
           fi
 
           # Guardar el nuevo sismo en el caché
           echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          echo "Contenido actualizado del archivo:"
+          cat .sismo_cache/last_sismo.txt
 
       - name: Save cache
         uses: actions/cache@v3
         with:
           path: .sismo_cache
-          key: sismo-data-cache-${{ runner.os }}-${{ hashFiles('.sismo_cache/last_sismo.txt') }}
+          key: sismo-data-cache-${{ runner.os }}
 
       - name: Send Notifications if Different
         if: env.SISMO_RESPONSE != ''
