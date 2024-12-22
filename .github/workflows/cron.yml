@@ -22,9 +22,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .sismo_cache
-          key: sismo-data-cache-${{ runner.os }}
+          key: sismo-data-cache-${{ github.run_id }}
           restore-keys: |
-            sismo-data-cache-${{ runner.os }}
+            sismo-data-cache-
 
       - name: Display initial cache value
         run: |
@@ -41,10 +41,6 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
-
-      - name: Verificar contenido del archivo JSON
-        run: |
-          cat firebase-service-account.json
 
       - name: Fetch Sismo Data
         id: fetch_sismo
@@ -63,23 +59,21 @@ jobs:
           echo "Nuevo sismo obtenido desde el endpoint: $NEW_SISMO"
 
           # Comparar valores y exportar resultado como variable de entorno
-          if [ "$NEW_SISMO" != "$LAST_SISMO" ]; then
+          if [ "$NEW_SISMO" != "$LAST_SISMO" ] && [ "$NEW_SISMO" != "" ]; then
             echo "Los valores son diferentes: (Cache) $LAST_SISMO != (Response) $NEW_SISMO"
             echo "SISMO_RESPONSE=${NEW_SISMO}" >> $GITHUB_ENV
-          else
-            echo "Los valores son iguales: (Cache) $LAST_SISMO == (Response) $NEW_SISMO"
-          fi
 
-          # Guardar el nuevo sismo en el caché
-          echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
-          echo "Contenido actualizado del archivo:"
-          cat .sismo_cache/last_sismo.txt
+            # Guardar el nuevo sismo en el archivo de caché
+            echo "$NEW_SISMO" > .sismo_cache/last_sismo.txt
+          else
+            echo "Los valores son iguales o el nuevo sismo es vacío: (Cache) $LAST_SISMO == (Response) $NEW_SISMO"
+          fi
 
       - name: Save cache
         uses: actions/cache@v3
         with:
           path: .sismo_cache
-          key: sismo-data-cache-${{ runner.os }}
+          key: sismo-data-cache-${{ github.run_id }}
 
       - name: Send Notifications if Different
         if: env.SISMO_RESPONSE != ''
