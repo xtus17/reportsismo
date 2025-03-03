@@ -334,7 +334,7 @@ const sendNotifications = async () => {
         return {
           to: pushToken,
           sound: "default",
-          title: "Alerta de Sismo - EasySOS App",
+          title: "Alerta de Sismo",
           body: `Sismo detectado: ${JSON.parse(sismoResponse).data[3]}`,
         };
       })
