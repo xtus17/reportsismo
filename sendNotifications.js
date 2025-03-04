@@ -302,7 +302,7 @@ const sendNotifications = async () => {
 
     // Aquí puedes mantener la lógica de las notificaciones
     const response = await fetch(
-      "https://empoderadasapp-default-rtdb.firebaseio.com/users.json"
+      "https://earthsismos-default-rtdb.firebaseio.com/users.json"
     );
     const data = await response.json();
 
