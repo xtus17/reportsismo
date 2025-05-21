@@ -41,6 +41,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+          cat firebase-service-account.json # Para verificar
 
       - name: Fetch Sismo Data
         id: fetch_sismo
