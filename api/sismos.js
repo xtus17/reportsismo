@@ -1,41 +1,33 @@
-import chromium from 'chrome-aws-lambda';
-import puppeteer from 'puppeteer-core';
+import fetch from 'node-fetch';
+import * as cheerio from 'cheerio';
+
+const url = 'https://ultimosismo.igp.gob.pe/';
 
 export default async function handler(req, res) {
-  try {
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath || '/usr/bin/chromium-browser',
-      headless: chromium.headless,
-    });
+    try {
+        // Hacer la solicitud HTTP
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Error al obtener la página: ${response.statusText}`);
 
-    const page = await browser.newPage();
-    await page.goto('https://ultimosismo.igp.gob.pe/', { waitUntil: 'networkidle0' });
+        const html = await response.text();
+        const $ = cheerio.load(html);
 
-    // Esperar al contenedor principal
-    await page.waitForSelector('.p-2.pl-3.position-relative.bg-green.text-white', { timeout: 5000 });
+        // Seleccionar el div específico
+        const earthquakeDiv = $('.p-2.pl-3.position-relative.bg-green.text-white');
 
-    // Extraer los datos
-    const data = await page.evaluate(() => {
-      const getText = (selector) => {
-        const el = document.querySelector(selector);
-        return el ? el.textContent.trim() : '';
-      };
+        // Extraer los valores necesarios
+        const magnitude = earthquakeDiv.find('.mg-us strong span').text().trim();
+        const reference = earthquakeDiv.find('.reference span').text().trim();
 
-      const magnitud = document.querySelector('.p-2.pl-3.position-relative.bg-green.text-white strong span')?.innerText.trim() || '';
-      const referencia = document.querySelector('.p-2.pl-3.position-relative.bg-green.text-white p.reference span')?.innerText.trim() || '';
+        // Crear objeto con los datos extraídos
+        const earthquakeData = {
+            magnitude: magnitude,
+            reference: reference
+        };
 
-      return [ magnitud, referencia];
-    });
-
-    await browser.close();
-
-    if (!data || data.some(d => d === '')) {
-      return res.status(500).json({ success: false, message: 'No se pudieron obtener todos los datos' });
+        // Retornar los valores extraídos
+        res.status(200).json({ success: true, data: earthquakeData });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    res.status(200).json({ success: true, data });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
 }
