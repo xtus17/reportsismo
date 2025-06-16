@@ -15,8 +15,6 @@
     "dotenv": "^16.4.7",
     "expo-server-sdk": "^3.13.0",
     "firebase-admin": "^13.0.1",
-    "puppeteer-core":"24.6.1",
-    "chrome-aws-lambda":"10.1.0",
     "node-fetch": "^3.3.2"
   }
 }
